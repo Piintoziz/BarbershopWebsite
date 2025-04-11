@@ -54,11 +54,11 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				barber: {
-					DEFAULT: '#1A1F2C',
-					dark: '#141820',
-					light: '#333945',
+					DEFAULT: '#111111', // Updated to match our new dark theme
+					dark: '#0a0a0a',
+					light: '#1c1c1c',
 					gold: '#D4AF37',
-					'gold-light': '#EACCCD',
+					'gold-light': '#E5C667',
 					gray: '#8E9196',
 				}
 			},
@@ -113,7 +113,7 @@ export default {
 			},
 			fontFamily: {
 				'playfair': ['"Playfair Display"', 'serif'],
-				'poppins': ['Poppins', 'sans-serif']
+				'montserrat': ['Montserrat', 'sans-serif']
 			}
 		}
 	},

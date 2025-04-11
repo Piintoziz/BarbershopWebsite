@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, Clipboard, Scissors, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,26 @@ const BookingPage = () => {
     phone: ''
   });
   const [step, setStep] = useState(1);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const userAuth = localStorage.getItem('userAuthenticated');
+    const userName = localStorage.getItem('userName');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    setIsAuthenticated(userAuth === 'true');
+    
+    // If authenticated, pre-fill the form
+    if (userAuth === 'true' && userName && userEmail) {
+      setFormData(prev => ({
+        ...prev,
+        name: userName,
+        email: userEmail
+      }));
+    }
+  }, []);
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId);
@@ -80,6 +101,24 @@ const BookingPage = () => {
         description: "Please select both a date and time for your appointment.",
         variant: "destructive",
       });
+      return;
+    }
+    
+    // If not authenticated and moving to final step, redirect to login
+    if (!isAuthenticated && step === 2) {
+      toast({
+        title: "Login Required",
+        description: "Please sign in or create an account to complete your booking.",
+      });
+      
+      // Store booking data in session storage temporarily
+      sessionStorage.setItem('pendingBooking', JSON.stringify({
+        service: selectedService,
+        date: selectedDate,
+        time: selectedTime
+      }));
+      
+      navigate('/login');
       return;
     }
 
@@ -127,6 +166,9 @@ const BookingPage = () => {
       phone: ''
     });
     setStep(1);
+    
+    // Redirect to homepage after successful booking
+    setTimeout(() => navigate('/'), 2000);
   };
 
   const selectedServiceDetails = selectedService ? serviceOptions.find(s => s.id === selectedService) : null;
@@ -134,7 +176,7 @@ const BookingPage = () => {
   return (
     <>
       {/* Page Header */}
-      <section className="pt-32 pb-16 bg-barber-dark">
+      <section className="pt-32 pb-16 bg-[#0a0a0a]">
         <div className="container mx-auto px-4 text-center">
           <h5 className="text-barber-gold uppercase tracking-wider mb-3 font-medium">Book Your Visit</h5>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Online Booking</h1>
@@ -146,9 +188,9 @@ const BookingPage = () => {
       </section>
 
       {/* Booking Form */}
-      <section className="py-16 bg-barber">
+      <section className="py-16 bg-[#111111]">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto bg-barber-light p-8 rounded-lg">
+          <div className="max-w-3xl mx-auto glass-card p-8 rounded-lg">
             {/* Progress Indicator */}
             <div className="mb-8">
               <div className="flex justify-between">
@@ -158,14 +200,14 @@ const BookingPage = () => {
                   active={step === 1} 
                   completed={step > 1}
                 />
-                <div className="hidden sm:block w-full border-t-2 border-barber self-center mx-2"></div>
+                <div className="hidden sm:block w-full border-t-2 border-[#333] self-center mx-2"></div>
                 <StepIndicator 
                   number={2} 
                   title="Choose Date & Time" 
                   active={step === 2} 
                   completed={step > 2}
                 />
-                <div className="hidden sm:block w-full border-t-2 border-barber self-center mx-2"></div>
+                <div className="hidden sm:block w-full border-t-2 border-[#333] self-center mx-2"></div>
                 <StepIndicator 
                   number={3} 
                   title="Your Details" 
@@ -183,10 +225,10 @@ const BookingPage = () => {
                   {serviceOptions.map((service) => (
                     <button
                       key={service.id}
-                      className={`p-4 rounded-md border-2 text-left transition-all ${
+                      className={`p-4 rounded-md border-2 text-left transition-all hover-scale ${
                         selectedService === service.id 
-                          ? 'border-barber-gold bg-barber-dark' 
-                          : 'border-barber hover:border-barber-gold'
+                          ? 'border-barber-gold bg-[#1c1c1c]' 
+                          : 'border-[#333] hover:border-barber-gold'
                       }`}
                       onClick={() => handleServiceSelect(service.id)}
                     >
@@ -235,7 +277,7 @@ const BookingPage = () => {
                           {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-barber-dark" align="start">
+                      <PopoverContent className="w-auto p-0 bg-[#1c1c1c]" align="start">
                         <Calendar
                           mode="single"
                           selected={selectedDate}
@@ -256,7 +298,7 @@ const BookingPage = () => {
                   {/* Time Selection */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Select Time</label>
-                    <div className="h-64 overflow-y-auto border border-barber rounded-md p-2">
+                    <div className="h-64 overflow-y-auto border border-[#333] rounded-md p-2">
                       <div className="grid grid-cols-2 gap-2">
                         {timeSlots.map((time) => (
                           <button
@@ -264,7 +306,7 @@ const BookingPage = () => {
                             className={`p-2 rounded-md text-center transition-colors ${
                               selectedTime === time 
                                 ? 'bg-barber-gold text-black' 
-                                : 'bg-barber hover:bg-barber-light'
+                                : 'bg-[#1c1c1c] hover:bg-[#262626]'
                             }`}
                             onClick={() => handleTimeSelect(time)}
                           >
@@ -283,7 +325,7 @@ const BookingPage = () => {
                   <Button 
                     onClick={prevStep} 
                     variant="outline" 
-                    className="border-barber-gray text-barber-gray hover:bg-barber"
+                    className="border-[#333] text-barber-gray hover:bg-[#1c1c1c]"
                   >
                     Back
                   </Button>
@@ -291,7 +333,7 @@ const BookingPage = () => {
                     onClick={nextStep} 
                     className="bg-barber-gold hover:bg-barber-gold/90 text-black"
                   >
-                    Next Step
+                    {isAuthenticated ? "Next Step" : "Sign in to Continue"}
                   </Button>
                 </div>
               </div>
@@ -303,7 +345,7 @@ const BookingPage = () => {
                 <h2 className="text-2xl font-bold mb-6">Your Details</h2>
                 
                 {/* Booking Summary */}
-                <div className="mb-6 bg-barber p-4 rounded-md">
+                <div className="mb-6 bg-[#1c1c1c] p-4 rounded-md">
                   <h3 className="font-medium mb-3">Booking Summary</h3>
                   <div className="space-y-2">
                     <div className="flex">
@@ -332,7 +374,7 @@ const BookingPage = () => {
                 
                 {/* Contact Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
+                  <div className="form-control-wrapper">
                     <label htmlFor="name" className="block text-sm font-medium mb-2">
                       <span className="flex items-center">
                         <User className="mr-2 h-4 w-4" />
@@ -346,10 +388,10 @@ const BookingPage = () => {
                       onChange={handleChange}
                       placeholder="John Doe"
                       required
-                      className="bg-barber border-barber focus:border-barber-gold"
+                      className="bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
                     />
                   </div>
-                  <div>
+                  <div className="form-control-wrapper">
                     <label htmlFor="email" className="block text-sm font-medium mb-2">
                       <span className="flex items-center">
                         <Mail className="mr-2 h-4 w-4" />
@@ -364,10 +406,10 @@ const BookingPage = () => {
                       onChange={handleChange}
                       placeholder="john@example.com"
                       required
-                      className="bg-barber border-barber focus:border-barber-gold"
+                      className="bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
                     />
                   </div>
-                  <div>
+                  <div className="form-control-wrapper">
                     <label htmlFor="phone" className="block text-sm font-medium mb-2">
                       <span className="flex items-center">
                         <Phone className="mr-2 h-4 w-4" />
@@ -381,7 +423,7 @@ const BookingPage = () => {
                       onChange={handleChange}
                       placeholder="(123) 456-7890"
                       required
-                      className="bg-barber border-barber focus:border-barber-gold"
+                      className="bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
                     />
                   </div>
 
@@ -390,7 +432,7 @@ const BookingPage = () => {
                       onClick={prevStep} 
                       type="button"
                       variant="outline" 
-                      className="border-barber-gray text-barber-gray hover:bg-barber"
+                      className="border-[#333] text-barber-gray hover:bg-[#1c1c1c]"
                     >
                       Back
                     </Button>
@@ -428,11 +470,11 @@ const StepIndicator = ({
       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${
         active ? 'bg-barber-gold text-black' : 
         completed ? 'bg-green-500 text-white' : 
-        'bg-barber text-barber-gray'
+        'bg-[#1c1c1c] text-barber-gray'
       } mb-2`}>
         {completed ? <Check className="h-6 w-6" /> : number}
       </div>
-      <span className={`text-sm hidden sm:block ${active ? 'text-barber-gold' : 'text-barber-gray'}`}>
+      <span className={`text-xs hidden sm:block ${active ? 'text-barber-gold' : 'text-barber-gray'}`}>
         {title}
       </span>
     </div>

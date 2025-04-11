@@ -14,6 +14,8 @@ import BookingPage from "./pages/BookingPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import NotFound from "./pages/NotFound";
+import RegisterPage from "./pages/RegisterPage";
+import LoginPage from "./pages/LoginPage";
 
 // Layout Components
 import MainLayout from "./layouts/MainLayout";
@@ -35,11 +37,17 @@ const App = () => (
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/booking" element={<BookingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Route>
           
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLoginPage />} />
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          
+          {/* Protected Admin Routes */}
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          </Route>
           
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />

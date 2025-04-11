@@ -50,8 +50,8 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-barber py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-barber-light p-8 rounded-lg">
+    <div className="min-h-screen flex items-center justify-center bg-[#111111] py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 glass-card p-8 rounded-lg">
         <div className="text-center">
           <div className="flex items-center justify-center">
             <span className="text-barber-gold font-playfair text-2xl font-bold">ELITE</span>
@@ -67,7 +67,7 @@ const AdminLoginPage = () => {
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <div>
+            <div className="form-control-wrapper">
               <label htmlFor="username" className="sr-only">Username</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -80,13 +80,13 @@ const AdminLoginPage = () => {
                   required
                   value={credentials.username}
                   onChange={handleChange}
-                  className="pl-10 bg-barber border-barber focus:border-barber-gold"
+                  className="pl-10 bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
                   placeholder="Username"
                 />
               </div>
             </div>
             
-            <div>
+            <div className="form-control-wrapper">
               <label htmlFor="password" className="sr-only">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -99,7 +99,7 @@ const AdminLoginPage = () => {
                   required
                   value={credentials.password}
                   onChange={handleChange}
-                  className="pl-10 bg-barber border-barber focus:border-barber-gold"
+                  className="pl-10 bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
                   placeholder="Password"
                 />
               </div>

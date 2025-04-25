@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Clock, MapPin, Phone, Mail } from 'lucide-react';
 
@@ -10,11 +9,11 @@ const Footer = () => {
           {/* Logo and about */}
           <div>
             <div className="flex items-center mb-4">
-              <span className="text-barber-gold font-playfair text-2xl font-bold">ELITE</span>
-              <span className="text-white font-playfair ml-1 text-lg">BARBER</span>
+              <span className="text-barber-gold font-playfair text-2xl font-bold">STUDIO</span>
+              <span className="text-white font-playfair text-2xl font-bold">53</span>
             </div>
             <p className="text-barber-gray mb-6">
-              Where tradition meets style. Our skilled barbers deliver exceptional services in a relaxed, masculine environment.
+              Onde a tradição encontra o estilo. Os nossos barbeiros oferecem serviços excepcionais num ambiente relaxado e masculino.
             </p>
             <div className="flex space-x-4">
               <SocialIcon icon={<Facebook size={18} />} />
@@ -25,67 +24,66 @@ const Footer = () => {
 
           {/* Quick links */}
           <div>
-            <h3 className="text-lg font-playfair font-bold mb-6 gold-border-bottom pb-3">Quick Links</h3>
+            <h3 className="text-lg font-playfair font-bold mb-6 gold-border-bottom pb-3">Links Rápidos</h3>
             <ul className="space-y-3">
               <FooterLink to="/" label="Home" />
               <FooterLink to="/about" label="About" />
               <FooterLink to="/services" label="Services" />
               <FooterLink to="/booking" label="Book Now" />
               <FooterLink to="/contact" label="Contact" />
-              <FooterLink to="/admin" label="Admin" />
             </ul>
           </div>
 
           {/* Opening hours */}
           <div>
-            <h3 className="text-lg font-playfair font-bold mb-6 gold-border-bottom pb-3">Opening Hours</h3>
+            <h3 className="text-lg font-playfair font-bold mb-6 gold-border-bottom pb-3">Horário de Funcionamento</h3>
             <ul className="space-y-3">
-              <OpeningHoursRow day="Monday - Friday" hours="9:00 AM - 8:00 PM" />
-              <OpeningHoursRow day="Saturday" hours="9:00 AM - 6:00 PM" />
-              <OpeningHoursRow day="Sunday" hours="10:00 AM - 5:00 PM" />
+              <OpeningHoursRow day="Segunda - Sexta" hours="9:00 - 20:00" />
+              <OpeningHoursRow day="Sábado" hours="9:00 - 18:00" />
+              <OpeningHoursRow day="Domingo" hours="10:00 - 17:00" />
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-lg font-playfair font-bold mb-6 gold-border-bottom pb-3">Contact Info</h3>
+            <h3 className="text-lg font-playfair font-bold mb-6 gold-border-bottom pb-3">Informações de Contacto</h3>
             <ul className="space-y-4">
               <ContactInfoRow 
                 icon={<MapPin size={18} />}
-                text="123 Barber Street, City, State, 12345"
+                text="60 R. Cândido dos Reis, Almada, Setúbal"
               />
               <ContactInfoRow 
                 icon={<Phone size={18} />}
-                text="+1 (234) 567-8900"
-                link="tel:+12345678900"
+                text="+351 966 099 867"
+                link="tel:+351912345678"
               />
               <ContactInfoRow 
                 icon={<Mail size={18} />}
-                text="info@elitebarber.com"
-                link="mailto:info@elitebarber.com"
+                text="info@studio53.com"
+                link="mailto:info@studio53.com"
               />
               <ContactInfoRow 
                 icon={<Clock size={18} />}
-                text="9:00 AM - 8:00 PM"
+                text="9:00 - 20:00"
               />
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-barber-gray text-sm">
-            © {new Date().getFullYear()} Elite Barber. All rights reserved.
+          <p className="text-sm text-gray-400">
+            © {new Date().getFullYear()} Studio53. Todos os direitos reservados.
           </p>
           <div className="mt-4 md:mt-0">
             <ul className="flex space-x-6">
               <li>
                 <Link to="/privacy" className="text-barber-gray hover:text-barber-gold text-sm">
-                  Privacy Policy
+                  Política de Privacidade
                 </Link>
               </li>
               <li>
                 <Link to="/terms" className="text-barber-gray hover:text-barber-gold text-sm">
-                  Terms of Service
+                  Termos de Serviço
                 </Link>
               </li>
             </ul>

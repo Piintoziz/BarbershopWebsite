@@ -1,4 +1,3 @@
-
 import { Outlet, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Menu, X, LogOut, Calendar, Users, Settings } from "lucide-react";
@@ -29,15 +28,13 @@ const AdminLayout = () => {
       <div className="hidden md:flex flex-col w-64 bg-[#1c1c1c] border-r border-[#333] text-white">
         <div className="p-5 border-b border-[#333]">
           <div className="flex items-center">
-            <span className="text-barber-gold font-playfair text-xl font-bold">ELITE</span>
-            <span className="text-white font-playfair ml-1">ADMIN</span>
+            <span className="text-barber-gold font-playfair text-xl font-bold">STUDIO</span>
+            <span className="text-white font-playfair text-xl font-bold">53</span>
           </div>
         </div>
         
         <nav className="flex-1 px-2 py-4 space-y-1">
           <NavLink to="/admin/dashboard" icon={<Calendar />} label="Bookings" />
-          <NavLink to="/admin/clients" icon={<Users />} label="Clients" />
-          <NavLink to="/admin/settings" icon={<Settings />} label="Settings" />
         </nav>
         
         <div className="p-4 border-t border-[#333]">
@@ -67,8 +64,8 @@ const AdminLayout = () => {
         <div className="relative flex flex-col w-64 h-full bg-[#1c1c1c] border-r border-[#333] text-white">
           <div className="flex items-center justify-between p-5 border-b border-[#333]">
             <div className="flex items-center">
-              <span className="text-barber-gold font-playfair text-xl font-bold">ELITE</span>
-              <span className="text-white font-playfair ml-1">ADMIN</span>
+              <span className="text-barber-gold font-playfair text-xl font-bold">STUDIO</span>
+              <span className="text-white font-playfair text-xl font-bold">53</span>
             </div>
             <button onClick={() => setSidebarOpen(false)}>
               <X size={24} />

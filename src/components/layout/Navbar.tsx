@@ -1,181 +1,168 @@
-
 import { useState, useEffect } from 'react';
-import { Menu, X, Phone, LogOut } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Menu, X, Phone, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const navigate = useNavigate();
-
+  const [isOpen, setIsOpen] = useState(false);
+  const { user, loading, signOut } = useAuth();
+  
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    // Check user authentication status
-    const checkAuth = () => {
-      const userAuth = localStorage.getItem('userAuthenticated');
-      setIsAuthenticated(userAuth === 'true');
-    };
-
-    checkAuth();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('userAuthenticated');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    setIsAuthenticated(false);
-    
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    
-    navigate('/');
+  
+  const handleScroll = () => {
+    if (window.scrollY > 10) {
+      setIsScrolled(true);
+    } else {
+      setIsScrolled(false);
+    }
+  };
+  
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
   };
 
   return (
-    <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-[#111111] shadow-lg py-2' : 'bg-transparent py-4'
+    <nav
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-black/90 backdrop-blur-md py-3' : 'bg-transparent py-5'
       }`}
     >
-      <div className="container mx-auto px-4 flex justify-between items-center">
+      <div className="container mx-auto flex justify-between items-center px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center">
-          <span className="text-barber-gold font-playfair text-2xl font-bold">ELITE</span>
-          <span className="text-white font-playfair ml-1 text-lg">BARBER</span>
+          <span className="text-barber-gold font-playfair text-2xl font-bold">STUDIO</span>
+          <span className="text-white font-playfair text-2xl font-bold ml-1">53</span>
         </Link>
-
+        
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex items-center space-x-8">
           <NavLink to="/" label="Home" />
-          <NavLink to="/about" label="About" />
-          <NavLink to="/services" label="Services" />
-          <NavLink to="/contact" label="Contact" />
+          <NavLink to="/services" label="Serviços" />
+          <NavLink to="/about" label="Sobre" />
+          <NavLink to="/contact" label="Contacto" />
           
-          {isAuthenticated ? (
-            <div className="flex items-center space-x-4">
-              <NavLink to="/booking" label="My Bookings" />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleLogout}
-                className="flex items-center text-barber-gray hover:text-barber-gold"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost" className="text-barber-gray hover:text-white">
-                <Link to="/login">Sign In</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-barber-gold text-barber-gold hover:bg-barber-gold hover:text-black">
-                <Link to="/register">Register</Link>
-              </Button>
-            </div>
+          {!loading && (
+            user ? (
+              <div className="flex items-center space-x-4">
+                <Link 
+                  to="/dashboard" 
+                  className="text-white hover:text-barber-gold transition-colors"
+                >
+                  <div className="flex items-center">
+                    <User className="w-5 h-5 mr-2" />
+                    <span>Minha Conta</span>
+                  </div>
+                </Link>
+                <button 
+                  onClick={signOut}
+                  className="text-white hover:text-barber-gold transition-colors flex items-center"
+                >
+                  <LogOut className="w-5 h-5 mr-2" />
+                  <span>Sair</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link 
+                  to="/login" 
+                  className="text-white hover:text-barber-gold transition-colors"
+                >
+                  Login
+                </Link>
+                <Link to="/booking">
+                  <Button 
+                    className="bg-barber-gold hover:bg-barber-gold/90 text-black"
+                  >
+                    Agendar
+                  </Button>
+                </Link>
+              </div>
+            )
           )}
-        </nav>
-
-        {/* Mobile Call Now Button */}
-        <div className="md:hidden flex items-center">
-          <a href="tel:+12345678900" className="mr-6">
-            <Phone className="h-5 w-5 text-barber-gold" />
-          </a>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="text-white focus:outline-none"
-          >
+        </div>
+        
+        {/* Mobile Menu Toggle */}
+        <div className="md:hidden">
+          <button onClick={toggleMenu} className="text-white focus:outline-none">
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
-
-      {/* Mobile Navigation */}
+      
+      {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#111111] shadow-lg animate-fade-in">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col space-y-4">
-              <MobileNavLink to="/" label="Home" onClick={() => setIsOpen(false)} />
-              <MobileNavLink to="/about" label="About" onClick={() => setIsOpen(false)} />
-              <MobileNavLink to="/services" label="Services" onClick={() => setIsOpen(false)} />
-              <MobileNavLink to="/contact" label="Contact" onClick={() => setIsOpen(false)} />
-              
-              {isAuthenticated ? (
-                <>
-                  <MobileNavLink to="/booking" label="My Bookings" onClick={() => setIsOpen(false)} />
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => {
-                      handleLogout();
-                      setIsOpen(false);
-                    }}
-                    className="flex items-center justify-center text-barber-gray hover:text-barber-gold py-3"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    asChild 
-                    variant="ghost" 
-                    className="text-barber-gray hover:text-white justify-start py-3"
-                  >
-                    <Link to="/login" onClick={() => setIsOpen(false)}>Sign In</Link>
-                  </Button>
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    className="border-barber-gold text-barber-gold hover:bg-barber-gold hover:text-black w-full"
-                  >
-                    <Link to="/register" onClick={() => setIsOpen(false)}>Register</Link>
-                  </Button>
-                </>
-              )}
+        <div className="md:hidden bg-black/95 backdrop-blur-md absolute w-full">
+          <div className="container mx-auto px-4 py-6 flex flex-col space-y-4">
+            <MobileNavLink to="/" label="Home" onClick={toggleMenu} />
+            <MobileNavLink to="/services" label="Serviços" onClick={toggleMenu} />
+            <MobileNavLink to="/about" label="Sobre" onClick={toggleMenu} />
+            <MobileNavLink to="/contact" label="Contacto" onClick={toggleMenu} />
+            
+            {user ? (
+              <>
+                <MobileNavLink to="/dashboard" label="Minha Conta" onClick={toggleMenu} />
+                <button 
+                  onClick={() => {
+                    signOut();
+                    toggleMenu();
+                  }}
+                  className="text-white hover:text-barber-gold transition-colors py-2 text-left"
+                >
+                  Sair
+                </button>
+              </>
+            ) : (
+              <>
+                <MobileNavLink to="/login" label="Login" onClick={toggleMenu} />
+                <MobileNavLink to="/register" label="Registar" onClick={toggleMenu} />
+              </>
+            )}
+            
+            <Link to="/booking" onClick={toggleMenu}>
+              <Button 
+                className="w-full mt-4 bg-barber-gold hover:bg-barber-gold/90 text-black"
+              >
+                Agendar
+              </Button>
+            </Link>
+            
+            <div className="pt-4 mt-4 border-t border-gray-700 flex items-center">
+              <Phone className="w-5 h-5 mr-2 text-barber-gold" />
+              <a href="tel:+351912345678" className="text-white">
+                +351 912 345 678
+              </a>
             </div>
           </div>
         </div>
       )}
-    </header>
+    </nav>
   );
 };
 
-const NavLink = ({ to, label }: { to: string; label: string }) => {
-  return (
-    <Link 
-      to={to} 
-      className="text-white hover:text-barber-gold transition-colors duration-200 font-medium"
-    >
-      {label}
-    </Link>
-  );
-};
+// Desktop Nav Link
+const NavLink = ({ to, label }: { to: string; label: string }) => (
+  <Link 
+    to={to} 
+    className="text-white hover:text-barber-gold transition-colors"
+  >
+    {label}
+  </Link>
+);
 
-const MobileNavLink = ({ to, label, onClick }: { to: string; label: string; onClick: () => void }) => {
-  return (
-    <Link 
-      to={to} 
-      className="text-white hover:text-barber-gold transition-colors duration-200 py-2 block text-lg"
-      onClick={onClick}
-    >
-      {label}
-    </Link>
-  );
-};
+// Mobile Nav Link
+const MobileNavLink = ({ to, label, onClick }: { to: string; label: string; onClick: () => void }) => (
+  <Link 
+    to={to} 
+    className="text-white hover:text-barber-gold transition-colors py-2"
+    onClick={onClick}
+  >
+    {label}
+  </Link>
+);
 
 export default Navbar;

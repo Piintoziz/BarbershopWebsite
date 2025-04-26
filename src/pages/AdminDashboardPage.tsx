@@ -24,7 +24,11 @@ import {
   UsersRound, // Icon for Horarios section
   CircleUserRound, // Import icon for Barbers section
   UserCog, // Added new icon
-  Trash2 // Added new icon
+  Trash2, // Added new icon
+  Loader2, // Added new icon
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,7 +62,8 @@ import {
   updateBarberWorkingHour,
   deleteBarberWorkingHour,
   setupDefaultWorkingHours,
-  BarberWorkingHour // <--- Adicionar esta interface
+  BarberWorkingHour, // <--- Adicionar esta interface
+  getDashboardData, DashboardData
 } from '@/lib/supabase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,6 +113,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Add Table imports
+import React from 'react';
 
 interface Appointment {
   id: string;
@@ -142,48 +148,6 @@ interface Service {
   includedServices?: string[];
 }
 
-// Adicione esta função para simular dados para o dashboard
-const generateDashboardData = () => {
-  return {
-    totalBookings: {
-      weekly: 48,
-      monthly: 187,
-      yearly: 2365
-    },
-    popularServices: [
-      { name: "Corte de Cabelo", count: 78, percentage: 42 },
-      { name: "Barba", count: 45, percentage: 24 },
-      { name: "Corte + Barba", count: 35, percentage: 19 },
-      { name: "Tratamento Capilar", count: 18, percentage: 10 },
-      { name: "Outros", count: 9, percentage: 5 }
-    ],
-    topClients: [
-      { name: "João Silva", visits: 12, totalSpent: 560 },
-      { name: "Carlos Oliveira", visits: 8, totalSpent: 420 },
-      { name: "André Santos", visits: 7, totalSpent: 380 },
-      { name: "Luís Costa", visits: 6, totalSpent: 290 },
-      { name: "Rodrigo Ferreira", visits: 5, totalSpent: 240 }
-    ],
-    peakHours: [
-      { hour: "09:00", bookings: 15 },
-      { hour: "10:00", bookings: 25 },
-      { hour: "11:00", bookings: 30 },
-      { hour: "12:00", bookings: 15 },
-      { hour: "13:00", bookings: 10 },
-      { hour: "14:00", bookings: 20 },
-      { hour: "15:00", bookings: 35 },
-      { hour: "16:00", bookings: 45 },
-      { hour: "17:00", bookings: 40 },
-      { hour: "18:00", bookings: 30 }
-    ],
-    financials: {
-      weekly: { projected: 1450, actual: 1320 },
-      monthly: { projected: 5600, actual: 5200 },
-      yearly: { projected: 68000, actual: 62500 }
-    }
-  };
-};
-
 // Interface for Report Data Structure
 interface ReportData {
   totalRevenue: number;
@@ -216,7 +180,8 @@ const AdminDashboardPage = () => {
   const [activeSection, setActiveSection] = useState<'dashboard' | 'appointments' | 'services' | 'settings' | 'horarios' | 'reports' | 'clients' | 'barbers'>('appointments'); // Ensure reports is included
   
   const [timeRange, setTimeRange] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
-  const [dashboardData, setDashboardData] = useState(generateDashboardData());
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(false); // New state for loading dashboard data
   
   const [services, setServices] = useState<Service[]>([
     { id: '1', name: 'Corte de Cabelo', description: 'Corte masculino com tesoura e máquina', price: 25, duration: 30, isCombo: false },
@@ -1735,6 +1700,31 @@ const AdminDashboardPage = () => {
     7: 'sunday',
   };
 
+  // Adicionar um useEffect para carregar os dados do dashboard quando o componente for montado ou o timeRange mudar
+  useEffect(() => {
+    if (activeSection === 'dashboard') {
+      fetchDashboardData();
+    }
+  }, [activeSection, timeRange]);
+
+  // Adicionar função para buscar dados do dashboard
+  const fetchDashboardData = async () => {
+    try {
+      setLoadingDashboard(true);
+      const data = await getDashboardData(timeRange);
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Erro ao buscar dados do dashboard:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados do dashboard',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingDashboard(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-barber">
       {/* Admin Header */}
@@ -2059,7 +2049,7 @@ const AdminDashboardPage = () => {
               <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Dashboard & Estatísticas</h1>
                 
-                        <div className="flex items-center">
+                <div className="flex items-center">
                   <span className="mr-2 text-barber-gray">Período:</span>
                   <Select 
                     value={timeRange}
@@ -2074,206 +2064,316 @@ const AdminDashboardPage = () => {
                       <SelectItem value="yearly">Anual</SelectItem>
                     </SelectContent>
                   </Select>
-                        </div>
-                        </div>
-              
-              {/* Cards de métricas */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="bg-barber-light border-[#333]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium flex items-center">
-                      <Calendar className="mr-2 h-5 w-5 text-barber-gold" />
-                      Total de Agendamentos
-                    </CardTitle>
-                    <CardDescription>
-                      {timeRange === 'weekly' && 'Últimos 7 dias'}
-                      {timeRange === 'monthly' && 'Últimos 30 dias'}
-                      {timeRange === 'yearly' && 'Últimos 12 meses'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-barber-gold">
-                      {dashboardData.totalBookings[timeRange]}
-                    </div>
-                    <p className="text-sm text-barber-gray mt-2">
-                      {timeRange === 'weekly' && '~6.8 por dia'}
-                      {timeRange === 'monthly' && '~6.2 por dia'}
-                      {timeRange === 'yearly' && '~6.5 por dia'}
-                    </p>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-barber-light border-[#333]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium flex items-center">
-                      <BarChart className="mr-2 h-5 w-5 text-barber-gold" />
-                      Faturamento
-                    </CardTitle>
-                    <CardDescription>
-                      {timeRange === 'weekly' && 'Esta semana'}
-                      {timeRange === 'monthly' && 'Este mês'}
-                      {timeRange === 'yearly' && 'Este ano'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-baseline">
-                      <span className="text-4xl font-bold text-barber-gold">
-                        {dashboardData.financials[timeRange].actual}€
-                      </span>
-                      <span className="ml-2 text-sm text-barber-gray">
-                        / {dashboardData.financials[timeRange].projected}€ projeção
-                      </span>
-                    </div>
-                    <div 
-                      className="w-full bg-barber-dark/50 h-2 rounded-full mt-3"
-                    >
-                      <div 
-                        className="bg-barber-gold h-2 rounded-full" 
-                        style={{ 
-                          width: `${(dashboardData.financials[timeRange].actual / dashboardData.financials[timeRange].projected) * 100}%` 
-                        }}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-barber-light border-[#333]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium flex items-center">
-                      <Clock className="mr-2 h-5 w-5 text-barber-gold" />
-                      Hora de Pico
-                    </CardTitle>
-                    <CardDescription>
-                      Horário com mais agendamentos
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-barber-gold">
-                      {dashboardData.peakHours.reduce((a, b) => a.bookings > b.bookings ? a : b).hour}
-                    </div>
-                    <p className="text-sm text-barber-gray mt-2">
-                      {dashboardData.peakHours.reduce((a, b) => a.bookings > b.bookings ? a : b).bookings} agendamentos
-                    </p>
-                  </CardContent>
-                </Card>
+                </div>
               </div>
               
-              {/* Serviços Populares e Horas de Pico */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <Card className="bg-barber-light border-[#333]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-xl">
-                      <Scissors className="mr-2 h-5 w-5 text-barber-gold" />
-                      Serviços Mais Populares
-                    </CardTitle>
-                    <CardDescription>
-                      Distribuição por serviço
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {dashboardData.popularServices.map((service, i) => (
-                        <div key={i}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span>{service.name}</span>
-                            <span className="text-barber-gold">{service.count} ({service.percentage}%)</span>
+              {loadingDashboard ? (
+                <div className="flex justify-center items-center h-[50vh]">
+                  <Loader2 className="w-10 h-10 text-barber-gold animate-spin" />
+                  <span className="ml-2 text-barber-gray">Carregando dados...</span>
+                </div>
+              ) : !dashboardData ? (
+                <div className="text-center py-16">
+                  <p className="text-barber-gray">Não foi possível carregar os dados do dashboard.</p>
+                  <Button 
+                    onClick={fetchDashboardData} 
+                    className="mt-4 bg-barber-gold hover:bg-barber-gold/90 text-black"
+                  >
+                    Tentar Novamente
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Cards de métricas */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <Card className="bg-barber-light border-[#333]">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                          <Calendar className="mr-2 h-5 w-5 text-barber-gold" />
+                          Total de Agendamentos
+                        </CardTitle>
+                        <CardDescription>
+                          {timeRange === 'weekly' && 'Últimos 7 dias'}
+                          {timeRange === 'monthly' && 'Últimos 30 dias'}
+                          {timeRange === 'yearly' && 'Últimos 12 meses'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center">
+                          <div className="text-4xl font-bold text-barber-gold">
+                            {dashboardData.totalBookings[timeRange]}
                           </div>
-                          <div className="w-full bg-barber-dark/50 h-2 rounded-full">
-                            <div 
-                              className="bg-barber-gold h-2 rounded-full" 
-                              style={{ width: `${service.percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-barber-light border-[#333]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-xl">
-                      <Clock className="mr-2 h-5 w-5 text-barber-gold" />
-                      Horas de Pico
-                    </CardTitle>
-                    <CardDescription>
-                      Distribuição de agendamentos por hora
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1">
-                      {dashboardData.peakHours.map((hour, i) => (
-                        <div key={i} className="flex items-center">
-                          <span className="w-12 text-sm text-barber-gray">{hour.hour}</span>
-                          <div className="flex-1 flex-grow">
-                            <div 
-                              className="bg-barber-gold h-6 rounded"
-                              style={{ 
-                                width: `${(hour.bookings / dashboardData.peakHours.reduce((a, b) => a.bookings > b.bookings ? a : b).bookings) * 100}%`,
-                                opacity: 0.3 + ((hour.bookings / dashboardData.peakHours.reduce((a, b) => a.bookings > b.bookings ? a : b).bookings) * 0.7)
-                              }}
-                            >
-                              <span className="pl-2 py-1 text-xs font-medium text-white">{hour.bookings}</span>
-                            </div>
+                          {/* Indicador de tendência */}
+                          <div className="ml-3 flex items-center">
+                            {dashboardData.trends.bookings > 0 ? (
+                              <div className="flex items-center text-green-500">
+                                <ArrowUpRight className="h-4 w-4 mr-1" />
+                                <span className="text-sm font-medium">+{dashboardData.trends.bookings}%</span>
+                              </div>
+                            ) : dashboardData.trends.bookings < 0 ? (
+                              <div className="flex items-center text-red-500">
+                                <ArrowDownRight className="h-4 w-4 mr-1" />
+                                <span className="text-sm font-medium">{dashboardData.trends.bookings}%</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center text-barber-gray">
+                                <Minus className="h-4 w-4 mr-1" />
+                                <span className="text-sm font-medium">0%</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {/* Clientes Frequentes */}
-              <Card className="bg-barber-light border-[#333] mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-xl">
-                    <User className="mr-2 h-5 w-5 text-barber-gold" />
-                    Clientes Mais Frequentes
-                  </CardTitle>
-                  <CardDescription>
-                    Clientes com mais visitas
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-[#333]">
-                          <th className="text-left py-2 px-4">Cliente</th>
-                          <th className="text-left py-2 px-4">Visitas</th>
-                          <th className="text-left py-2 px-4">Total Gasto</th>
-                          <th className="text-left py-2 px-4">Média p/ Visita</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashboardData.topClients.map((client, i) => (
-                          <tr key={i} className="border-b border-[#333] hover:bg-barber-dark/30">
-                            <td className="py-3 px-4">{client.name}</td>
-                            <td className="py-3 px-4">{client.visits}</td>
-                            <td className="py-3 px-4 text-barber-gold">{client.totalSpent}€</td>
-                            <td className="py-3 px-4">{Math.round(client.totalSpent / client.visits)}€</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        <p className="text-sm text-barber-gray mt-2">
+                          {timeRange === 'weekly' && `~${Math.round(dashboardData.totalBookings.weekly / 7)} por dia`}
+                          {timeRange === 'monthly' && `~${Math.round(dashboardData.totalBookings.monthly / 30)} por dia`}
+                          {timeRange === 'yearly' && `~${Math.round(dashboardData.totalBookings.yearly / 365)} por dia`}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-barber-light border-[#333]">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                          <BarChart className="mr-2 h-5 w-5 text-barber-gold" />
+                          Faturamento
+                        </CardTitle>
+                        <CardDescription>
+                          {timeRange === 'weekly' && 'Esta semana'}
+                          {timeRange === 'monthly' && 'Este mês'}
+                          {timeRange === 'yearly' && 'Este ano'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center">
+                          <span className="text-4xl font-bold text-barber-gold">
+                            {dashboardData.financials[timeRange].actual}€
+                          </span>
+                          {/* Indicador de tendência */}
+                          <div className="ml-3 flex items-center">
+                            {dashboardData.trends.revenue > 0 ? (
+                              <div className="flex items-center text-green-500">
+                                <ArrowUpRight className="h-4 w-4 mr-1" />
+                                <span className="text-sm font-medium">+{dashboardData.trends.revenue}%</span>
+                              </div>
+                            ) : dashboardData.trends.revenue < 0 ? (
+                              <div className="flex items-center text-red-500">
+                                <ArrowDownRight className="h-4 w-4 mr-1" />
+                                <span className="text-sm font-medium">{dashboardData.trends.revenue}%</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center text-barber-gray">
+                                <Minus className="h-4 w-4 mr-1" />
+                                <span className="text-sm font-medium">0%</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-baseline mt-1">
+                          <span className="text-sm text-barber-gray">
+                            / {dashboardData.financials[timeRange].projected}€ meta
+                          </span>
+                        </div>
+                        
+                        {/* Calcular progresso e definir cor apropriada */}
+                        {(() => {
+                          const progress = dashboardData.financials[timeRange].actual / dashboardData.financials[timeRange].projected;
+                          const percentage = Math.min(Math.round(progress * 100), 100);
+                          
+                          // Definir cor baseada no progresso
+                          let color = 'bg-yellow-300'; // padrão
+                          if (percentage < 40) color = 'bg-red-500';
+                          else if (percentage < 70) color = 'bg-amber-500';
+                          else if (percentage >= 100) color = 'bg-green-500';
+                          
+                          return (
+                            <React.Fragment>
+                              <div className="flex justify-between text-xs mt-1 mb-1">
+                                <span className="text-barber-gray">{percentage}% concluído</span>
+                                <span className={percentage >= 100 ? 'text-green-500' : 'text-barber-gray'}>
+                                  {percentage >= 100 ? 'Meta atingida!' : `Faltam ${dashboardData.financials[timeRange].projected - dashboardData.financials[timeRange].actual}€`}
+                                </span>
+                              </div>
+                              <div className="w-full bg-barber-dark/20 h-2 rounded-full mt-1">
+                                <div 
+                                  className={`${color} h-2 rounded-full transition-all duration-500`} 
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </React.Fragment>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-barber-light border-[#333]">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                          <Clock className="mr-2 h-5 w-5 text-barber-gold" />
+                          Hora de Pico
+                        </CardTitle>
+                        <CardDescription>
+                          Horário com mais agendamentos
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-4xl font-bold text-barber-gold">
+                          {dashboardData.peakHours.length > 0 
+                            ? dashboardData.peakHours.reduce((a, b) => a.bookings > b.bookings ? a : b).hour 
+                            : 'N/A'}
+                        </div>
+                        <p className="text-sm text-barber-gray mt-2">
+                          {dashboardData.peakHours.length > 0 
+                            ? `${dashboardData.peakHours.reduce((a, b) => a.bookings > b.bookings ? a : b).bookings} agendamentos` 
+                            : 'Sem dados disponíveis'}
+                        </p>
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <div className="flex justify-end">
-                <Button
-                  className="bg-barber-gold hover:bg-barber-gold/90 text-black"
-                  onClick={() => {
-                    // Aqui você poderia implementar a lógica para gerar um relatório
-                    toast({
-                      title: "Relatório Gerado",
-                      description: "O relatório foi gerado e está disponível para download.",
-                    });
-                  }}
-                >
-                  Exportar Relatório
-                </Button>
-              </div>
+                  
+                  {/* Serviços Populares e Horas de Pico */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <Card className="bg-barber-light border-[#333]">
+                      <CardHeader>
+                        <CardTitle className="flex items-center text-xl">
+                          <Scissors className="mr-2 h-5 w-5 text-barber-gold" />
+                          Serviços Mais Populares
+                        </CardTitle>
+                        <CardDescription>
+                          Distribuição por serviço
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {dashboardData.popularServices.length === 0 ? (
+                          <p className="text-center text-barber-gray py-6">Sem dados de serviços disponíveis</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {dashboardData.popularServices.map((service, index) => {
+                              // Array de cores para os serviços (tons dourados e âmbar)
+                              const serviceColors = [
+                                'bg-amber-600',
+                                'bg-amber-500',
+                                'bg-yellow-500',
+                                'bg-yellow-400',
+                                'bg-yellow-300'
+                              ];
+                              
+                              return (
+                                <div key={index}>
+                                  <div className="flex justify-between items-center mb-1">
+                                    <div className="flex items-center">
+                                      <div className={`w-3 h-3 rounded-full ${serviceColors[index % serviceColors.length]} mr-2`}></div>
+                                      <span className="font-medium text-sm">{service.name}</span>
+                                    </div>
+                                    <span className="text-barber-gold font-medium text-sm">
+                                      {service.count} ({service.percentage}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-barber-dark/20 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-2 rounded-full ${serviceColors[index % serviceColors.length]}`} 
+                                      style={{ width: `${service.percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-barber-light border-[#333]">
+                      <CardHeader>
+                        <CardTitle className="flex items-center text-xl">
+                          <Clock className="mr-2 h-5 w-5 text-barber-gold" />
+                          Horas de Pico
+                        </CardTitle>
+                        <CardDescription>
+                          Distribuição de agendamentos por hora
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {dashboardData.peakHours.length === 0 ? (
+                          <p className="text-center text-barber-gray py-6">Sem dados de horários disponíveis</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {dashboardData.peakHours.map((hour, i) => {
+                              // Calcular o máximo de agendamentos para normalizar a largura das barras
+                              const maxBookings = Math.max(...dashboardData.peakHours.map(h => h.bookings));
+                              // Calcular porcentagem relativa ao máximo
+                              const percentage = (hour.bookings / maxBookings) * 100;
+                              // Calcular cor baseada na porcentagem (de amarelo claro a dourado escuro)
+                              const intensity = Math.round(30 + (percentage * 0.7));
+                              const color = `hsl(43, 90%, ${intensity}%)`;
+                              
+                              return (
+                                <div key={i} className="flex items-center mb-2">
+                                  <span className="w-14 text-sm font-medium">{hour.hour}</span>
+                                  <div className="flex-1 bg-barber-dark/20 h-6 rounded-md overflow-hidden">
+                                    <div 
+                                      className="h-full flex items-center px-2 rounded-md transition-all duration-300"
+                                      style={{ 
+                                        width: `${percentage}%`,
+                                        background: color,
+                                        minWidth: hour.bookings > 0 ? '30px' : '0',
+                                      }}
+                                    >
+                                      <span className={`text-xs font-medium ${intensity > 50 ? 'text-black' : 'text-white'}`}>
+                                        {hour.bookings}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {/* Clientes Frequentes */}
+                  <Card className="bg-barber-light border-[#333] mb-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-xl">
+                        <User className="mr-2 h-5 w-5 text-barber-gold" />
+                        Clientes Mais Frequentes
+                      </CardTitle>
+                      <CardDescription>
+                        Clientes com mais visitas
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {dashboardData.topClients.length === 0 ? (
+                        <p className="text-center text-barber-gray py-6">Sem dados de clientes disponíveis</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b border-[#333]">
+                                <th className="text-left py-2 px-4">Cliente</th>
+                                <th className="text-left py-2 px-4">Visitas</th>
+                                <th className="text-left py-2 px-4">Total Gasto</th>
+                                <th className="text-left py-2 px-4">Média p/ Visita</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dashboardData.topClients.map((client, i) => (
+                                <tr key={i} className="border-b border-[#333] hover:bg-barber-dark/30">
+                                  <td className="py-3 px-4">{client.name}</td>
+                                  <td className="py-3 px-4">{client.visits}</td>
+                                  <td className="py-3 px-4 text-barber-gold">{client.totalSpent}€</td>
+                                  <td className="py-3 px-4">{Math.round(client.totalSpent / client.visits)}€</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </div>
           )}
 

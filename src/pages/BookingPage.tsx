@@ -397,14 +397,14 @@ const BookingPage = () => {
         description: "A sua consulta foi agendada. Um email de confirmação foi enviado para o seu endereço de email.",
       });
       
-      // ADICIONAR: Processar a fila de emails imediatamente para teste
-      console.log("Processando fila de emails imediatamente para teste");
+      // Processar apenas o email mais recente
+      console.log("Processando email de confirmação");
       try {
         const { processEmailQueue } = await import('@/lib/supabase');
-        const result = await processEmailQueue(10);
-        console.log("Resultado do processamento da fila:", result);
+        const result = await processEmailQueue(1); // Processa apenas 1 email
+        console.log("Resultado do processamento do email:", result);
       } catch (emailError) {
-        console.error("Erro ao processar fila de emails:", emailError);
+        console.error("Erro ao processar email:", emailError);
       }
       
       // Resetar formulário

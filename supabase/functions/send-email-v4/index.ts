@@ -83,7 +83,7 @@ serve(async (req) => {
     // Enviar email
     const { error: sendError } = await resend.emails.send({
       from: 'STUDIO53 <no-reply@studio53.pt>',
-      to: [data.to],
+      to: data.to,
       subject: data.subject,
       html: data.html,
       cc: data.cc,

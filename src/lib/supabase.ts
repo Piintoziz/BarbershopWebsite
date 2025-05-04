@@ -950,7 +950,6 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
       .from('appointments')
       .select(`
         services (
-          id,
           name
         )
       `)
@@ -966,8 +965,8 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
     let totalServices = 0;
 
     servicesData?.forEach(appointment => {
-      if (appointment.services) {
-        const serviceName = appointment.services.name;
+      if (appointment.services && 'name' in appointment.services) {
+        const serviceName = appointment.services.name as string;
         serviceCountMap[serviceName] = (serviceCountMap[serviceName] || 0) + 1;
         totalServices++;
       }
@@ -987,7 +986,9 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
       .from('appointments')
       .select(`
         client_name,
-        services ( price )
+        services (
+          price
+        )
       `)
       .eq('status', 'completed')
       .gte('appointment_date', startDateFormatted)
@@ -1002,7 +1003,9 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
 
     clientsData?.forEach(appointment => {
       const clientName = appointment.client_name;
-      const price = appointment.services?.price || 0;
+      const price = appointment.services && 'price' in appointment.services 
+        ? (appointment.services.price as number) 
+        : 0;
 
       if (!clientVisitsMap[clientName]) {
         clientVisitsMap[clientName] = { visits: 0, spent: 0 };
@@ -1067,7 +1070,10 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
 
     // Calcular receita atual
     const revenue = financeData.reduce((total, appointment) => {
-      return total + (appointment.services?.price || 0);
+      const price = appointment.services && 'price' in appointment.services 
+        ? (appointment.services.price as number) 
+        : 0;
+      return total + price;
     }, 0);
 
     // Calcular receita do período anterior (para comparação)
@@ -1085,7 +1091,10 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
     }
 
     const previousRevenue = previousFinanceData.reduce((total, appointment) => {
-      return total + (appointment.services?.price || 0);
+      const price = appointment.services && 'price' in appointment.services 
+        ? (appointment.services.price as number) 
+        : 0;
+      return total + price;
     }, 0);
 
     // Calcular tendências (crescimento ou queda em percentual)
@@ -1287,7 +1296,7 @@ export const processEmailQueue = async (maxEmails: number = 10) => {
         const htmlContent = item.html_body || item.body;
         
         // Enviar o email usando o serviço Resend
-        const { error: sendError } = await sendEmail(
+        const result = await sendEmail(
           item.to_email,
           item.subject,
           htmlContent,
@@ -1295,15 +1304,15 @@ export const processEmailQueue = async (maxEmails: number = 10) => {
           bccEmails
         );
         
-        if (sendError) {
-          console.error(`Erro ao enviar email ID ${item.id}:`, sendError);
+        if ('error' in result && result.error) {
+          console.error(`Erro ao enviar email ID ${item.id}:`, result.error);
           errors++;
           
           // Atualizar o status com o erro
           await supabase
             .from('email_queue')
             .update({
-              error_message: JSON.stringify(sendError),
+              error_message: JSON.stringify(result.error),
               last_attempt: new Date().toISOString()
             })
             .eq('id', item.id);

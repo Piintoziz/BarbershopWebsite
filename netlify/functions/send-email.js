@@ -57,8 +57,10 @@ exports.handler = async (event) => {
 
     // Prepara os dados do email
     const emailData = {
-      from: 'STUDIO53 <onboarding@resend.dev>',
-      to,
+      // Após verificar seu domínio no Resend, atualize este email para usar seu domínio
+      // Exemplo: from: 'STUDIO53 <agendamentos@studio53.pt>'
+      from: 'STUDIO53 <onboarding@resend.dev>', // Altere este email após verificar seu domínio
+      to: to, // Agora podemos enviar para qualquer email
       subject,
       html,
       ...(cc && { cc }),

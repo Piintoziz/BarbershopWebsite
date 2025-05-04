@@ -1,9 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { GlobalStyle } from './styles/global';
+import { ThemeProvider } from 'styled-components';
+import { defaultTheme } from './styles/themes/default';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import SplashScreen from './components/SplashScreen';
+import { queryClient } from './lib/react-query';
 
 // Layouts
 import MainLayout from '@/layouts/MainLayout';
@@ -22,9 +29,6 @@ import UserDashboard from '@/pages/UserDashboard';
 import AdminLoginPage from '@/pages/AdminLoginPage';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
 import NotFound from '@/pages/NotFound';
-
-// Criar o cliente de consulta (React Query)
-const queryClient = new QueryClient();
 
 // Componente para proteger rotas que requerem autenticação
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -82,13 +86,18 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <ThemeProvider theme={defaultTheme}>
+        <BrowserRouter>
+          <SplashScreen />
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+          <GlobalStyle />
+          <ToastContainer />
+        </BrowserRouter>
+      </ThemeProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

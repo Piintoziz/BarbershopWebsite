@@ -140,7 +140,8 @@ export const sendEmail = async (
   bcc?: string[]
 ) => {
   try {
-    console.log(`Enviando email para: ${to}`);
+    console.log(`Iniciando envio de email para: ${to}`);
+    console.log('Dados do email:', { subject, cc, bcc });
     
     const response = await fetch('/.netlify/functions/send-email', {
       method: 'POST',
@@ -156,18 +157,21 @@ export const sendEmail = async (
       })
     });
 
+    console.log('Resposta recebida:', response.status);
     const data = await response.json();
+    console.log('Dados da resposta:', data);
 
     if (!response.ok) {
-      console.error('Erro ao enviar email:', data.error);
-      return { error: data.error };
+      const errorMessage = data.error || 'Erro desconhecido ao enviar email';
+      console.error('Erro ao enviar email:', errorMessage);
+      throw new Error(errorMessage);
     }
 
     console.log('Email enviado com sucesso:', data);
     return { data };
   } catch (error) {
     console.error('Erro ao enviar email:', error);
-    return { error };
+    throw error;
   }
 };
 

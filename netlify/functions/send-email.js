@@ -27,10 +27,14 @@ exports.handler = async (event) => {
   }
 
   try {
+    console.log('Recebendo requisição de envio de email');
+    
     const { to, subject, html, cc, bcc } = JSON.parse(event.body);
+    console.log('Dados recebidos:', { to, subject, cc, bcc });
 
     // Validação básica
     if (!to || !subject || !html) {
+      console.error('Campos obrigatórios faltando:', { to, subject, html: !!html });
       return {
         statusCode: 400,
         headers,
@@ -38,39 +42,56 @@ exports.handler = async (event) => {
       };
     }
 
-    // Inicializa o Resend com a API key
+    // Verifica se a API key está presente
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY não encontrada nas variáveis de ambiente');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Missing RESEND_API_KEY' })
+      };
+    }
+
+    console.log('Inicializando Resend com API key');
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Envia o email
-    const { error } = await resend.emails.send({
+    // Prepara os dados do email
+    const emailData = {
       from: 'STUDIO53 <no-reply@studio53.pt>',
       to: [to],
       subject,
       html,
       ...(cc && { cc }),
       ...(bcc && { bcc })
-    });
+    };
+    console.log('Dados do email preparados:', emailData);
 
-    if (error) {
-      console.error('Erro ao enviar email:', error);
+    // Envia o email
+    console.log('Enviando email via Resend...');
+    const result = await resend.emails.send(emailData);
+    console.log('Resposta do Resend:', result);
+
+    if (result.error) {
+      console.error('Erro retornado pelo Resend:', result.error);
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Failed to send email' })
+        body: JSON.stringify({ error: result.error.message || 'Failed to send email' })
       };
     }
 
+    console.log('Email enviado com sucesso');
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true })
+      body: JSON.stringify({ success: true, data: result })
     };
   } catch (err) {
     console.error('Erro inesperado:', err);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ error: err.message || 'Internal server error' })
     };
   }
 }; 

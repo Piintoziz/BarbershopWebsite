@@ -58,7 +58,7 @@ exports.handler = async (event) => {
     // Prepara os dados do email
     const emailData = {
       from: 'STUDIO53 <onboarding@resend.dev>',
-      to: [to],
+      to,
       subject,
       html,
       ...(cc && { cc }),

@@ -2049,7 +2049,7 @@ const AdminDashboardPage = () => {
               <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Dashboard & Estatísticas</h1>
                 
-                <div className="flex items-center">
+                        <div className="flex items-center">
                   <span className="mr-2 text-barber-gray">Período:</span>
                   <Select 
                     value={timeRange}
@@ -2064,8 +2064,8 @@ const AdminDashboardPage = () => {
                       <SelectItem value="yearly">Anual</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
+                        </div>
+                        </div>
               
               {loadingDashboard ? (
                 <div className="flex justify-center items-center h-[50vh]">
@@ -2826,7 +2826,7 @@ const AdminDashboardPage = () => {
                         rows={4}
                         className="mt-1"
                       />
-                    </div>
+            </div>
                     
                     <div>
                       <Label htmlFor="reminder-message">Lembrete de Agendamento</Label>
@@ -3025,9 +3025,9 @@ const AdminDashboardPage = () => {
                                          >
                                             <Trash2 className="h-4 w-4" />
                                          </Button>
-                                     )}
-                                  </div>
-                                </div>
+          )}
+        </div>
+      </div>
                               </div>
                             );
                           })}
@@ -3799,8 +3799,8 @@ CREATE TABLE IF NOT EXISTS public.service_barber_availability (
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    );
+    </div>
+  );
 };
 
 export default AdminDashboardPage;

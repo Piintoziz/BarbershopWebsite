@@ -338,62 +338,44 @@ const BookingPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar formulário
+    if (isLoading) return;
+    
+    // Validação simples dos campos
     if (!formData.name || !formData.email || !formData.phone) {
       toast({
-        title: "Informação em Falta",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        title: "Dados Incompletos",
+        description: "Por favor, preencha todos os campos do formulário.",
         variant: "destructive",
       });
       return;
-    }
-    
-    if (!selectedService || !selectedBarber || !selectedDate || !selectedTime) {
-      toast({
-        title: "Informação em Falta",
-        description: "Por favor, preencha todas as informações da marcação.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Extrair horário de início e fim do selectedTime (formato: "10:00 AM - 10:30 AM")
-    let startTime, endTime;
-    if (availableTimeSlots.length > 0) {
-      // Se estamos usando os slots do Supabase
-      const selectedSlot = availableTimeSlots.find(slot => 
-        slot.available_time === selectedTime
-      );
-      if (selectedSlot) {
-        startTime = selectedSlot.available_time;
-        
-        // Calcular endTime com base na duração do serviço
-        const serviceDuration = selectedServiceDetails?.duration || 30; // Usar duração do serviço ou default 30 min
-        const [startHour, startMinute] = startTime.split(':').map(Number);
-        const startTimeDate = new Date(0);
-        startTimeDate.setHours(startHour, startMinute);
-        startTimeDate.setMinutes(startTimeDate.getMinutes() + serviceDuration);
-        
-        endTime = startTimeDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        
-      }
-    } else {
-      // Fallback (se necessário, pode ser removido se availableTimeSlots sempre tiver dados)
-      startTime = selectedTime;
-      // Estimativa de duração de 30 minutos (isso deve ser ajustado)
-      const [hour, minute] = selectedTime.split(':');
-      const endHour = parseInt(hour);
-      const endMinute = parseInt(minute) + 30;
-      endTime = `${endHour}:${endMinute < 60 ? endMinute : (endMinute - 60)}`;
     }
     
     setIsLoading(true);
     
     try {
-      // Formatar a data para o formato esperado pela API (YYYY-MM-DD)
+      // Obter horário de término baseado na duração
+      const selectedServiceDetails = serviceOptions.find(s => s.id === selectedService);
+      if (!selectedService || !selectedDate || !selectedTime || !selectedBarber) {
+        throw new Error("Dados de agendamento incompletos. Por favor, selecione serviço, data e hora.");
+      }
+      
+      const serviceDuration = selectedServiceDetails?.duration || 30; // Default 30 min
+      
+      // Data formatada para a API
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
-      // Criar a marcação no Supabase
+      // Calcular horário de término
+      const startTime = selectedTime;
+      
+      // Converter para minutos, adicionar duração e converter de volta para hora:minuto
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMinute;
+      const endMinutes = startMinutes + serviceDuration;
+      const endHour = Math.floor(endMinutes / 60);
+      const endMinute = endMinutes % 60;
+      const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+      
+      // Dados de agendamento
       const appointmentData = {
         barber_id: selectedBarber,
         client_name: formData.name,
@@ -414,6 +396,16 @@ const BookingPage = () => {
         title: "Reserva Efetuada com Sucesso!",
         description: "A sua consulta foi agendada. Um email de confirmação foi enviado para o seu endereço de email.",
       });
+      
+      // ADICIONAR: Processar a fila de emails imediatamente para teste
+      console.log("Processando fila de emails imediatamente para teste");
+      try {
+        const { processEmailQueue } = await import('@/lib/supabase');
+        const result = await processEmailQueue(10);
+        console.log("Resultado do processamento da fila:", result);
+      } catch (emailError) {
+        console.error("Erro ao processar fila de emails:", emailError);
+      }
       
       // Resetar formulário
       setSelectedService(null);

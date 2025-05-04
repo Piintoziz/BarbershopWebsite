@@ -120,7 +120,65 @@ export const getAvailableSlots = async (barberId: string, date: string, serviceI
 };
 
 export const createAppointment = async (appointmentData: any) => {
-  return await supabase.from('appointments').insert([appointmentData]).select();
+  try {
+    // Criar a marcação no banco de dados
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert([appointmentData])
+      .select();
+    
+    if (error) throw error;
+    
+    // Se a marcação foi criada com sucesso, vamos buscar informações adicionais
+    if (data && data.length > 0) {
+      const appointment = data[0];
+      
+      // Obter dados do barbeiro
+      const { data: barberData } = await supabase
+        .from('barbers')
+        .select('name')
+        .eq('id', appointment.barber_id)
+        .single();
+      
+      // Obter dados do serviço
+      const { data: serviceData } = await supabase
+        .from('services')
+        .select('name')
+        .eq('id', appointment.service_id)
+        .single();
+      
+      // Gerar o corpo do email usando a função de template que criamos
+      const { generateBookingConfirmationEmail } = await import('@/lib/resend');
+      
+      const emailHtml = generateBookingConfirmationEmail(
+        appointment.client_name,
+        serviceData?.name || 'Serviço não especificado',
+        barberData?.name || 'Barbeiro não especificado',
+        appointment.appointment_date,
+        appointment.start_time,
+        appointment.end_time
+      );
+      
+      // Adicionar email à fila para processamento
+      await addToEmailQueue({
+        to_email: appointment.client_email,
+        subject: `Agendamento Confirmado - ${serviceData?.name || 'Serviço'} - STUDIO53`,
+        html_body: emailHtml,
+        priority: 10, // Alta prioridade para emails de confirmação
+        metadata: {
+          appointment_id: appointment.id,
+          type: 'booking_confirmation'
+        }
+      });
+      
+      console.log('Email de confirmação adicionado à fila para:', appointment.client_email);
+    }
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Erro ao criar agendamento:', error);
+    return { data: null, error };
+  }
 };
 
 export const getUserAppointments = async (email: string) => {
@@ -1105,5 +1163,168 @@ export const getDashboardData = async (timeRange: 'weekly' | 'monthly' | 'yearly
         revenue: 8
       }
     };
+  }
+};
+
+// Interface para os dados de email
+export interface EmailQueueItem {
+  to_email: string;
+  subject: string;
+  html_body: string;
+  cc_emails?: string[];
+  bcc_emails?: string[];
+  metadata?: Record<string, any>;
+  priority?: number;
+}
+
+/**
+ * Adiciona um email à fila para processamento posterior
+ * @param emailData Dados do email a ser adicionado à fila
+ */
+export const addToEmailQueue = async (emailData: EmailQueueItem) => {
+  console.log('Adicionando email à fila:', emailData.to_email);
+  
+  try {
+    // Criar entrada na fila de emails - Ajustado para usar 'body' em vez de 'html_body'
+    const { data, error } = await supabase
+      .from('email_queue')
+      .insert({
+        to_email: emailData.to_email,
+        subject: emailData.subject,
+        body: emailData.html_body, // 'body' é a coluna existente
+        html_body: emailData.html_body, // preservar também em html_body para compatibilidade futura
+        cc_emails: emailData.cc_emails ? emailData.cc_emails.join(',') : null,
+        bcc_emails: emailData.bcc_emails ? emailData.bcc_emails.join(',') : null,
+        metadata: emailData.metadata || {},
+        priority: emailData.priority || 0,
+        sent: false,
+        attempts: 0
+      })
+      .select();
+    
+    if (error) {
+      console.error('Erro ao adicionar email à fila:', error);
+      return { error };
+    }
+    
+    console.log('Email adicionado à fila com sucesso:', data);
+    return { data };
+  } catch (error) {
+    console.error('Erro ao adicionar email à fila:', error);
+    return { error };
+  }
+};
+
+/**
+ * Função para processar emails na fila
+ * Chamada pelo serviço de email em intervalos regulares
+ * @param maxEmails Número máximo de emails a processar de uma vez
+ */
+export const processEmailQueue = async (maxEmails: number = 10) => {
+  console.log(`Processando até ${maxEmails} emails da fila...`);
+  
+  try {
+    // Buscar emails não enviados da fila
+    const { data: queueItems, error } = await supabase
+      .from('email_queue')
+      .select('*')
+      .eq('sent', false)
+      .lt('attempts', 5)  // Tentar no máximo 5 vezes
+      .order('priority', { ascending: false }) // Ordem decrescente de prioridade
+      .order('created_at', { ascending: true }) // Ordem crescente de data
+      .limit(maxEmails);
+    
+    if (error) {
+      console.error('Erro ao buscar fila de emails:', error);
+      return { processed: 0, errors: 0 };
+    }
+    
+    if (!queueItems || queueItems.length === 0) {
+      console.log('Nenhum email na fila para processar.');
+      return { processed: 0, errors: 0 };
+    }
+    
+    console.log(`Encontrados ${queueItems.length} emails para processar.`);
+    
+    let processed = 0;
+    let errors = 0;
+    
+    // Importar o módulo Resend para enviar os emails
+    const { sendEmail } = await import('@/lib/resend');
+    
+    // Processar cada email da fila
+    for (const item of queueItems) {
+      try {
+        console.log(`Processando email ID ${item.id} para ${item.to_email}`);
+        
+        // Incrementar a contagem de tentativas
+        await supabase
+          .from('email_queue')
+          .update({ 
+            attempts: (item.attempts || 0) + 1 
+          })
+          .eq('id', item.id);
+        
+        // Preparar dados de CC e BCC (se existirem)
+        const ccEmails = item.cc_emails ? item.cc_emails.split(',') : [];
+        const bccEmails = item.bcc_emails ? item.bcc_emails.split(',') : [];
+        
+        // Usar body ou html_body, o que estiver disponível
+        const htmlContent = item.html_body || item.body;
+        
+        // Enviar o email usando o serviço Resend
+        const { error: sendError } = await sendEmail(
+          item.to_email,
+          item.subject,
+          htmlContent,
+          ccEmails,
+          bccEmails
+        );
+        
+        if (sendError) {
+          console.error(`Erro ao enviar email ID ${item.id}:`, sendError);
+          errors++;
+          
+          // Atualizar o status com o erro
+          await supabase
+            .from('email_queue')
+            .update({
+              error_message: JSON.stringify(sendError),
+              last_attempt: new Date().toISOString()
+            })
+            .eq('id', item.id);
+        } else {
+          // Marcar como enviado se for bem-sucedido
+          await supabase
+            .from('email_queue')
+            .update({
+              sent: true,
+              sent_at: new Date().toISOString(),
+              error_message: null
+            })
+            .eq('id', item.id);
+          
+          processed++;
+        }
+      } catch (err) {
+        console.error(`Erro ao processar email ID ${item.id}:`, err);
+        errors++;
+        
+        // Registrar erro na entrada da fila
+        await supabase
+          .from('email_queue')
+          .update({
+            error_message: err instanceof Error ? err.message : 'Erro desconhecido',
+            last_attempt: new Date().toISOString()
+          })
+          .eq('id', item.id);
+      }
+    }
+    
+    console.log(`Processamento concluído: ${processed} enviados, ${errors} erros.`);
+    return { processed, errors };
+  } catch (error) {
+    console.error('Erro ao processar fila de emails:', error);
+    return { processed: 0, errors: 1 };
   }
 };

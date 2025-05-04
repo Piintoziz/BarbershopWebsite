@@ -121,6 +121,8 @@ export const getAvailableSlots = async (barberId: string, date: string, serviceI
 
 export const createAppointment = async (appointmentData: any) => {
   try {
+    console.log('Dados recebidos para criar agendamento:', appointmentData);
+    
     // Criar a marcação no banco de dados
     const { data, error } = await supabase
       .from('appointments')
@@ -132,20 +134,31 @@ export const createAppointment = async (appointmentData: any) => {
     // Se a marcação foi criada com sucesso, vamos buscar informações adicionais
     if (data && data.length > 0) {
       const appointment = data[0];
+      console.log('Agendamento criado:', appointment);
       
       // Obter dados do barbeiro
-      const { data: barberData } = await supabase
+      const { data: barberData, error: barberError } = await supabase
         .from('barbers')
         .select('name')
         .eq('id', appointment.barber_id)
         .single();
       
+      if (barberError) {
+        console.error('Erro ao buscar dados do barbeiro:', barberError);
+      }
+      console.log('Dados do barbeiro:', barberData);
+      
       // Obter dados do serviço
-      const { data: serviceData } = await supabase
+      const { data: serviceData, error: serviceError } = await supabase
         .from('services')
         .select('name')
         .eq('id', appointment.service_id)
         .single();
+      
+      if (serviceError) {
+        console.error('Erro ao buscar dados do serviço:', serviceError);
+      }
+      console.log('Dados do serviço:', serviceData);
       
       // Gerar o corpo do email usando a função de template que criamos
       const { generateBookingConfirmationEmail } = await import('@/lib/resend');
@@ -160,7 +173,7 @@ export const createAppointment = async (appointmentData: any) => {
       );
       
       // Adicionar email à fila para processamento
-      await addToEmailQueue({
+      const emailQueueResult = await addToEmailQueue({
         to_email: appointment.client_email,
         subject: `Agendamento Confirmado - ${serviceData?.name || 'Serviço'} - STUDIO53`,
         html_body: emailHtml,
@@ -171,6 +184,7 @@ export const createAppointment = async (appointmentData: any) => {
         }
       });
       
+      console.log('Resultado da adição do email à fila:', emailQueueResult);
       console.log('Email de confirmação adicionado à fila para:', appointment.client_email);
     }
     

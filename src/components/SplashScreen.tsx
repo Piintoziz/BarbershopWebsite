@@ -56,7 +56,7 @@ const SplashScreen = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-    }, 3000); // Aumentei para 3 segundos para acomodar a nova animação
+    }, 3000); 
 
     return () => clearTimeout(timer);
   }, []);

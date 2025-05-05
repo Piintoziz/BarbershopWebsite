@@ -29,6 +29,7 @@ import UserDashboard from '@/pages/UserDashboard';
 import AdminLoginPage from '@/pages/AdminLoginPage';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
 import NotFound from '@/pages/NotFound';
+import LegalPage from "./pages/LegalPage";
 
 // Componente para proteger rotas que requerem autenticação
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -67,6 +68,7 @@ const AppRoutes = () => {
             <UserDashboard />
           </ProtectedRoute>
         } />
+        <Route path="/legal" element={<LegalPage />} />
       </Route>
       
       {/* Admin Routes */}

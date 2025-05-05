@@ -87,8 +87,6 @@ export const updateBarber = async (
     profile_image_url?: string;
   }
 ) => {
-  console.log(`Atualizando barbeiro ID ${barberId}:`, barberData);
-  
   return await supabase
     .from('barbers')
     .update(barberData)
@@ -99,8 +97,6 @@ export const updateBarber = async (
 
 // Função para excluir um barbeiro
 export const deleteBarber = async (barberId: string) => {
-  console.log(`Excluindo barbeiro ID ${barberId}`);
-  
   return await supabase
     .from('barbers')
     .delete()
@@ -121,8 +117,6 @@ export const getAvailableSlots = async (barberId: string, date: string, serviceI
 
 export const createAppointment = async (appointmentData: any) => {
   try {
-    console.log('Dados recebidos para criar agendamento:', appointmentData);
-    
     // Criar a marcação no banco de dados
     const { data, error } = await supabase
       .from('appointments')
@@ -134,7 +128,6 @@ export const createAppointment = async (appointmentData: any) => {
     // Se a marcação foi criada com sucesso, vamos buscar informações adicionais
     if (data && data.length > 0) {
       const appointment = data[0];
-      console.log('Agendamento criado:', appointment);
       
       // Obter dados do barbeiro
       const { data: barberData, error: barberError } = await supabase
@@ -143,10 +136,7 @@ export const createAppointment = async (appointmentData: any) => {
         .eq('id', appointment.barber_id)
         .single();
       
-      if (barberError) {
-        console.error('Erro ao buscar dados do barbeiro:', barberError);
-      }
-      console.log('Dados do barbeiro:', barberData);
+      if (barberError) throw barberError;
       
       // Obter dados do serviço
       const { data: serviceData, error: serviceError } = await supabase
@@ -155,10 +145,7 @@ export const createAppointment = async (appointmentData: any) => {
         .eq('id', appointment.service_id)
         .single();
       
-      if (serviceError) {
-        console.error('Erro ao buscar dados do serviço:', serviceError);
-      }
-      console.log('Dados do serviço:', serviceData);
+      if (serviceError) throw serviceError;
       
       // Gerar o corpo do email usando a função de template que criamos
       const { generateBookingConfirmationEmail } = await import('@/lib/resend');
@@ -172,25 +159,11 @@ export const createAppointment = async (appointmentData: any) => {
         appointment.end_time
       );
       
-      // Adicionar email à fila para processamento
-      const emailQueueResult = await addToEmailQueue({
-        to_email: appointment.client_email,
-        subject: `Agendamento Confirmado - ${serviceData?.name || 'Serviço'} - STUDIO53`,
-        html_body: emailHtml,
-        priority: 10, // Alta prioridade para emails de confirmação
-        metadata: {
-          appointment_id: appointment.id,
-          type: 'booking_confirmation'
-        }
-      });
-      
-      console.log('Resultado da adição do email à fila:', emailQueueResult);
-      console.log('Email de confirmação adicionado à fila para:', appointment.client_email);
+      return { data, error: null };
     }
     
-    return { data, error };
+    return { data: null, error: new Error('Não foi possível criar o agendamento') };
   } catch (error) {
-    console.error('Erro ao criar agendamento:', error);
     return { data: null, error };
   }
 };
@@ -502,15 +475,6 @@ export const getServiceBarberAvailability = async () => {
 
 // Função para atualizar a disponibilidade de serviço por barbeiro
 export const updateServiceBarberAvailability = async (serviceId: string, barberIds: string[]) => {
-  console.log(`Atualizando disponibilidade do serviço ${serviceId} para barbeiros:`, barberIds);
-  
-  // Tenta forçar a atualização do cache do esquema
-  try {
-    await refreshSchemaCache();
-  } catch (e) {
-    console.warn('Não foi possível atualizar o cache do esquema:', e);
-  }
-  
   // Primeiro, removemos todas as associações existentes para este serviço
   const { error: deleteError } = await supabase
     .from('service_barber_availability')
@@ -518,7 +482,6 @@ export const updateServiceBarberAvailability = async (serviceId: string, barberI
     .eq('service_id', serviceId);
   
   if (deleteError) {
-    console.error('Erro ao remover disponibilidades existentes:', deleteError);
     return { error: deleteError };
   }
   
@@ -665,23 +628,13 @@ export const upsertMessageTemplate = async (templateType: string, templateBody: 
 // --- Função para buscar Barbeiros por Serviço ---
 export const getAvailableBarbersForService = async (serviceId: string): Promise<{ data: { barber_id: string }[] | null; error: any }> => {
   if (!serviceId) {
-    // Se nenhum serviço for fornecido, talvez retornar todos os barbeiros ou um erro?
-    // Por agora, vamos retornar um array vazio para evitar erros.
-    // Considerar buscar todos se esta for a lógica desejada.
-    console.warn('getAvailableBarbersForService chamado sem serviceId.');
     return { data: [], error: null }; 
   }
   
-  console.log(`Buscando barbeiros disponíveis para o serviço ID: ${serviceId}`);
-  const { data, error } = await supabase
+  return await supabase
     .from('service_barber_availability')
     .select('barber_id')
     .eq('service_id', serviceId);
-
-  // O Supabase retorna um tipo genérico, podemos fazer um cast se necessário, 
-  // mas vamos confiar na query por agora e retornar diretamente.
-  // É importante garantir que a RLS permite a leitura desta tabela pelo usuário logado.
-  return { data, error };
 };
 
 // --- Funções para Horários de Trabalho dos Barbeiros ---

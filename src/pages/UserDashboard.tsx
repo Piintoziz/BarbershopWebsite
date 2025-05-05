@@ -83,11 +83,28 @@ const UserDashboard = () => {
       
       const { data, error } = await getUserAppointments(user.email);
       
+      console.log("Dados retornados da API:", data); // Debug
+      
       if (error) throw error;
       
       if (data) {
         // Ordenar as marcações por data (mais recentes primeiro)
-        const sortedAppointments = data.sort((a, b) => {
+        const sortedAppointments = (data as any[]).map(appointment => {
+          console.log("Serviços da marcação:", appointment.services); // Debug
+          return {
+            id: appointment.id,
+            client_name: appointment.client_name,
+            client_email: appointment.client_email,
+            client_phone: appointment.client_phone,
+            appointment_date: appointment.appointment_date,
+            start_time: appointment.start_time,
+            end_time: appointment.end_time,
+            status: appointment.status,
+            notes: appointment.notes || "",
+            barbers: appointment.barbers,
+            services: appointment.services
+          };
+        }).sort((a, b) => {
           const dateA = new Date(`${a.appointment_date}T${a.start_time}`);
           const dateB = new Date(`${b.appointment_date}T${b.start_time}`);
           return dateB.getTime() - dateA.getTime();

@@ -16,9 +16,12 @@ const Footer = () => {
               Onde a tradição encontra o estilo. Os nossos barbeiros oferecem serviços excepcionais num ambiente relaxado e masculino.
             </p>
             <div className="flex space-x-4">
-              <SocialIcon icon={<Facebook size={18} />} />
-              <SocialIcon icon={<Instagram size={18} />} />
-              <SocialIcon icon={<Twitter size={18} />} />
+              <SocialIcon icon={<Facebook size={18} />} href="#" />
+              <SocialIcon 
+                icon={<Instagram size={18} />} 
+                href="https://www.instagram.com/duarte.thebarber/"
+              />
+              <SocialIcon icon={<Twitter size={18} />} href="#" />
             </div>
           </div>
 
@@ -75,18 +78,12 @@ const Footer = () => {
             © {new Date().getFullYear()} Studio53. Todos os direitos reservados.
           </p>
           <div className="mt-4 md:mt-0">
-            <ul className="flex space-x-6">
-              <li>
-                <Link to="/privacy" className="text-barber-gray hover:text-barber-gold text-sm">
-                  Política de Privacidade
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-barber-gray hover:text-barber-gold text-sm">
-                  Termos de Serviço
-                </Link>
-              </li>
-            </ul>
+            <Link 
+              to="/legal" 
+              className="text-barber-gray hover:text-barber-gold text-sm"
+            >
+              Política de Privacidade & Termos de Serviço
+            </Link>
           </div>
         </div>
       </div>
@@ -94,9 +91,14 @@ const Footer = () => {
   );
 };
 
-const SocialIcon = ({ icon }: { icon: React.ReactNode }) => {
+const SocialIcon = ({ icon, href }: { icon: React.ReactNode, href?: string }) => {
   return (
-    <a href="#" className="bg-barber-light h-8 w-8 rounded-full flex items-center justify-center hover:bg-barber-gold hover:text-barber-dark transition-colors duration-200">
+    <a 
+      href={href} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="bg-barber-light h-8 w-8 rounded-full flex items-center justify-center hover:bg-barber-gold hover:text-barber-dark transition-colors duration-200"
+    >
       {icon}
     </a>
   );

@@ -115,6 +115,7 @@ const BookingPage = () => {
   const [closedDates, setClosedDates] = useState<string[]>([]);
   const [availableBarberIds, setAvailableBarberIds] = useState<string[] | null>(null);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
   const navigate = useNavigate();
 
   // Buscar dados do Supabase ao carregar a página
@@ -210,13 +211,10 @@ const BookingPage = () => {
     try {
       setIsLoading(true);
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      console.log("Chamando getAvailableSlots com:", { barberId: selectedBarber, date: formattedDate, serviceId: selectedService });
       
       const { data, error } = await getAvailableSlots(selectedBarber, formattedDate, selectedService);
-      console.log("Resposta de getAvailableSlots:", { data, error });
       
       if (error) {
-        console.error("Erro completo ao buscar horários:", error);
         throw error; 
       }
       
@@ -243,22 +241,13 @@ const BookingPage = () => {
         // Update state with processed slots including the isTooLate flag
         setAvailableTimeSlots(processedSlots);
         setSelectedTime(null); 
-      } else {
-        setAvailableTimeSlots([]);
-        toast({
-          title: "Sem Horários Disponíveis",
-          description: "Não há horários disponíveis para este barbeiro nesta data. Por favor, escolha outra data ou outro barbeiro.",
-          variant: "default", // Changed to default as it's informational
-        });
       }
-    } catch (error: any) {
-      console.error("Erro detalhado no catch:", error);
+    } catch (error) {
       toast({
-        title: "Erro ao Buscar Horários",
-        description: error?.message || "Ocorreu um erro inesperado.",
+        title: "Erro",
+        description: "Não foi possível carregar os horários disponíveis.",
         variant: "destructive",
       });
-       setAvailableTimeSlots([]); // Clear slots on error
     } finally {
       setIsLoading(false);
     }
@@ -340,40 +329,42 @@ const BookingPage = () => {
     
     if (isLoading) return;
     
-    // Validação simples dos campos
-    if (!formData.name || !formData.email || !formData.phone) {
-      toast({
-        title: "Dados Incompletos",
-        description: "Por favor, preencha todos os campos do formulário.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
     try {
-      // Obter horário de término baseado na duração
-      const selectedServiceDetails = serviceOptions.find(s => s.id === selectedService);
-      if (!selectedService || !selectedDate || !selectedTime || !selectedBarber) {
-        throw new Error("Dados de agendamento incompletos. Por favor, selecione serviço, data e hora.");
+      setIsLoading(true);
+      
+      // Validar dados do formulário
+      if (!formData.name) {
+        toast({
+          title: "Campo Obrigatório",
+          description: "Por favor, preencha o seu nome.",
+          variant: "destructive",
+        });
+        return;
       }
       
-      const serviceDuration = selectedServiceDetails?.duration || 30; // Default 30 min
+      if (!selectedService || !selectedBarber || !selectedDate || !selectedTime) {
+        toast({
+          title: "Campos Obrigatórios",
+          description: "Por favor, selecione todos os campos necessários.",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      // Data formatada para a API
+      // Formatar data e hora
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      
-      // Calcular horário de término
       const startTime = selectedTime;
       
-      // Converter para minutos, adicionar duração e converter de volta para hora:minuto
-      const [startHour, startMinute] = startTime.split(':').map(Number);
-      const startMinutes = startHour * 60 + startMinute;
-      const endMinutes = startMinutes + serviceDuration;
-      const endHour = Math.floor(endMinutes / 60);
-      const endMinute = endMinutes % 60;
-      const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+      // Calcular hora de término baseado na duração do serviço
+      const selectedServiceData = serviceOptions.find(s => s.id === selectedService);
+      if (!selectedServiceData) {
+        throw new Error("Serviço não encontrado");
+      }
+      
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const endTimeDate = new Date(selectedDate);
+      endTimeDate.setHours(hours, minutes + selectedServiceData.duration, 0, 0);
+      const endTime = format(endTimeDate, 'HH:mm');
       
       // Dados de agendamento
       const appointmentData = {
@@ -388,7 +379,7 @@ const BookingPage = () => {
         notes: ''
       };
       
-      const { data, error } = await createAppointment(appointmentData);
+      const { error } = await createAppointment(appointmentData);
       
       if (error) throw error;
       
@@ -397,14 +388,12 @@ const BookingPage = () => {
         description: "A sua consulta foi agendada. Um email de confirmação foi enviado para o seu endereço de email.",
       });
       
-      // Processar apenas o email mais recente
-      console.log("Processando email de confirmação");
       try {
         const { processEmailQueue } = await import('@/lib/supabase');
-        const result = await processEmailQueue(1); // Processa apenas 1 email
-        console.log("Resultado do processamento do email:", result);
+        await processEmailQueue(1);
       } catch (emailError) {
-        console.error("Erro ao processar email:", emailError);
+        // Silently handle email processing errors
+        // The appointment was created successfully, so we don't want to show an error to the user
       }
       
       // Resetar formulário
@@ -422,10 +411,9 @@ const BookingPage = () => {
       // Redirecionar para a página inicial após o agendamento bem-sucedido
       setTimeout(() => navigate('/'), 2000);
     } catch (error: any) {
-      console.error("Erro ao criar marcação:", error);
       toast({
         title: "Erro ao Criar Marcação",
-        description: error.message || "Não foi possível criar a sua marcação. Por favor, tente novamente.",
+        description: "Não foi possível criar a sua marcação. Por favor, tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -511,6 +499,65 @@ const BookingPage = () => {
   const filteredBarbers = availableBarberIds === null
     ? [] // Não mostrar ninguém enquanto carrega ou se estado inicial for null
     : barbers.filter(barber => availableBarberIds.includes(barber.id));
+
+  // Função para verificar disponibilidade dos dias
+  const checkDayAvailability = async (date: Date): Promise<boolean> => {
+    if (!selectedBarber || !selectedService) return false;
+    
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const { data, error } = await getAvailableSlots(selectedBarber, formattedDate, selectedService);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setAvailableDays(prev => [...prev, formattedDate]);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Erro ao verificar disponibilidade:", error);
+      return false;
+    }
+  };
+
+  // Efeito para buscar disponibilidade quando o mês mudar
+  useEffect(() => {
+    if (!selectedBarber || !selectedService) return;
+    
+    const fetchMonthAvailability = async () => {
+      setAvailableDays([]); // Resetar dias disponíveis
+      const currentDate = new Date();
+      
+      // Verificar disponibilidade para os próximos 3 meses
+      for (let monthOffset = 0; monthOffset < 3; monthOffset++) {
+        const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + monthOffset, 1);
+        const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + monthOffset + 1, 0);
+        
+        // Se for o mês atual, começar do dia atual
+        const startDay = monthOffset === 0 ? currentDate.getDate() : 1;
+        
+        // Verificar cada dia do mês
+        for (let day = startDay; day <= lastDayOfMonth.getDate(); day++) {
+          const date = new Date(firstDayOfMonth.getFullYear(), firstDayOfMonth.getMonth(), day);
+          // Não verificar dias fechados
+          const formattedDate = format(date, 'yyyy-MM-dd');
+          if (!closedWeekdays.includes(date.getDay()) && !closedDates.includes(formattedDate)) {
+            await checkDayAvailability(date);
+          }
+        }
+      }
+    };
+    
+    fetchMonthAvailability();
+  }, [selectedBarber, selectedService, closedWeekdays, closedDates]);
+
+  // Função para verificar se uma data está dentro do período de 3 meses
+  const isWithinBookingPeriod = (date: Date) => {
+    const today = new Date();
+    const threeMonthsFromNow = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
+    return date <= threeMonthsFromNow;
+  };
 
   return (
     <>
@@ -689,23 +736,94 @@ const BookingPage = () => {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => {
-                            if (date) setSelectedDate(date);
-                          }}
-                          disabled={(date) => {
-                            const formattedDate = format(date, 'yyyy-MM-dd');
-                            return (
-                              date < new Date(new Date().setHours(0, 0, 0, 0)) || // Dias passados
-                              closedWeekdays.includes(date.getDay()) || // Dias da semana fechados
-                              closedDates.includes(formattedDate) // Datas específicas fechadas (feriados)
-                            );
-                          }}
-                          initialFocus
-                          locale={pt}
-                        />
+                        <div className="p-3">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => {
+                              if (date) {
+                                const formattedDate = format(date, 'yyyy-MM-dd');
+                                if (!isWithinBookingPeriod(date)) {
+                                  toast({
+                                    title: "Data Indisponível",
+                                    description: "Ainda não é possível fazer marcações para uma data tão distante.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                
+                                if (!availableDays.includes(formattedDate)) {
+                                  toast({
+                                    title: "Sem Horários Disponíveis",
+                                    description: "Não existem mais horários disponíveis para este dia.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                
+                                setSelectedDate(date);
+                              }
+                            }}
+                            disabled={(date) => {
+                              const formattedDate = format(date, 'yyyy-MM-dd');
+                              return (
+                                date < new Date(new Date().setHours(0, 0, 0, 0)) || // Dias passados
+                                closedWeekdays.includes(date.getDay()) || // Dias da semana fechados
+                                closedDates.includes(formattedDate) // Datas específicas fechadas (feriados)
+                              );
+                            }}
+                            modifiers={{
+                              available: (date: Date) => {
+                                const formattedDate = format(date, 'yyyy-MM-dd');
+                                return isWithinBookingPeriod(date) && availableDays.includes(formattedDate);
+                              },
+                              unavailable: (date: Date) => {
+                                const formattedDate = format(date, 'yyyy-MM-dd');
+                                const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                                const isFuture = date > new Date(new Date().setHours(0, 0, 0, 0));
+                                const isNotClosed = !closedWeekdays.includes(date.getDay()) && !closedDates.includes(formattedDate);
+                                return (isToday || isFuture) && isNotClosed && (!isWithinBookingPeriod(date) || !availableDays.includes(formattedDate));
+                              },
+                              selected: (date: Date) => {
+                                return selectedDate && format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+                              }
+                            }}
+                            modifiersStyles={{
+                              available: {
+                                backgroundColor: 'rgba(34, 197, 94, 0.2)', // Verde mais visível
+                                color: '#000',
+                                fontWeight: '500',
+                                borderRadius: '4px'
+                              },
+                              unavailable: {
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)', // Vermelho mais visível
+                                color: '#000',
+                                fontWeight: '500',
+                                borderRadius: '4px'
+                              },
+                              selected: {
+                                backgroundColor: '#D4AF37 !important', // Dourado mais forte
+                                color: '#000 !important',
+                                fontWeight: '700',
+                                borderRadius: '4px',
+                                border: '2px solid #D4AF37'
+                              }
+                            }}
+                            className="rounded-md border [&_.rdp-day_focus]:bg-barber-gold [&_.rdp-day_focus]:text-black [&_.rdp-day_focus]:font-bold"
+                            initialFocus
+                            locale={pt}
+                          />
+                          <div className="mt-3 flex items-center justify-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <div className="h-4 w-4 rounded bg-[rgba(34,197,94,0.2)]" />
+                              <span>Horários Disponíveis</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="h-4 w-4 rounded bg-[rgba(239,68,68,0.2)]" />
+                              <span>Sem Disponibilidade</span>
+                            </div>
+                          </div>
+                        </div>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -839,11 +957,14 @@ const BookingPage = () => {
                       name="email"
                       type="email"
                       value={formData.email}
-                      onChange={handleChange}
-                      placeholder="joao@exemplo.com"
-                      required
-                      className="bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
+                      disabled={isAuthenticated}
+                      className={`bg-[#1c1c1c] border-[#333] ${isAuthenticated ? 'opacity-50 cursor-not-allowed' : 'focus:border-barber-gold'}`}
                     />
+                    {isAuthenticated && (
+                      <p className="text-sm text-barber-gray mt-1">
+                        Este é o email associado à sua conta e não pode ser alterado.
+                      </p>
+                    )}
                   </div>
                   <div className="form-control-wrapper">
                     <label htmlFor="phone" className="block text-sm font-medium mb-2">
@@ -856,11 +977,14 @@ const BookingPage = () => {
                       id="phone"
                       name="phone"
                       value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="912 345 678"
-                      required
-                      className="bg-[#1c1c1c] border-[#333] focus:border-barber-gold"
+                      disabled={isAuthenticated}
+                      className={`bg-[#1c1c1c] border-[#333] ${isAuthenticated ? 'opacity-50 cursor-not-allowed' : 'focus:border-barber-gold'}`}
                     />
+                    {isAuthenticated && (
+                      <p className="text-sm text-barber-gray mt-1">
+                        Este é o telefone associado à sua conta e não pode ser alterado.
+                      </p>
+                    )}
                   </div>
 
                   <div className="pt-4 flex justify-between">

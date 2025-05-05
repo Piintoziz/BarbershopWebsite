@@ -37,17 +37,47 @@ export const generateBookingConfirmationEmail = (
           margin: 0 auto; 
           padding: 20px;
         }
+        @keyframes shine {
+          0% {
+            background-position: -200% -200%;
+          }
+          100% {
+            background-position: 200% 200%;
+          }
+        }
         .header { 
           background-color: #111111; 
           padding: 20px; 
           text-align: center;
           color: white;
+          position: relative;
+          overflow: hidden;
+        }
+        .header::before {
+          content: '';
+          position: absolute;
+          top: -100%;
+          left: -100%;
+          width: 300%;
+          height: 300%;
+          background: linear-gradient(
+            45deg,
+            transparent 45%,
+            rgba(212, 175, 55, 0.1) 48%,
+            rgba(212, 175, 55, 0.3) 50%,
+            rgba(212, 175, 55, 0.1) 52%,
+            transparent 55%
+          );
+          animation: shine 3s linear infinite;
+          pointer-events: none;
         }
         .logo {
           color: #D4AF37;
           font-size: 24px;
           font-weight: bold;
           margin: 0;
+          position: relative;
+          z-index: 1;
         }
         .content { 
           padding: 20px; 
@@ -116,7 +146,7 @@ export const generateBookingConfirmationEmail = (
         </div>
         <div class="footer">
           <p>&copy; ${new Date().getFullYear()} ${shopName} - Todos os direitos reservados.</p>
-          <p>Rua Principal, 123 - Lisboa</p>
+          <p>60 R. Cândido dos Reis, Almada, Setúbal</p>
         </div>
       </div>
     </body>

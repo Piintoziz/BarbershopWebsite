@@ -70,7 +70,7 @@ const HomePage = () => {
             className="h-full w-full object-cover object-center"
           />
           {/* Decorative elements */}
-          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-[#0a0a0a]/60 to-[#0a0a0a] opacity-90"></div>
+          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-[#0a0a0a]/30 to-[#0a0a0a] opacity-100"></div>
           <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-[#0a0a0a] to-transparent"></div>
         </div>
 

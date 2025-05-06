@@ -3014,19 +3014,30 @@ const AdminDashboardPage = () => {
                                   </div>
                                    {/* Remove Button Column */}
                                    <div className="flex items-end pb-1">
-                                     {(barberStartTime || barberEndTime) && (
+                                     {(barberStartTime || barberEndTime) ? (
                                          <Button 
                                             size="icon" 
                                             variant="ghost" 
                                             className="h-8 w-8 text-red-500 hover:bg-red-500/10"
-                                            onClick={() => handleUpdateBarberHour(dayOfWeek, '', '')} // Call update with empty strings to remove
-                                            disabled={!isShopOpen} // Optional: disable remove if shop closed? Or allow?
+                                            onClick={() => handleUpdateBarberHour(dayOfWeek, '', '')} 
+                                            disabled={!isShopOpen}
                                             title="Remover horário para este dia"
                                          >
                                             <Trash2 className="h-4 w-4" />
                                          </Button>
-          )}
-        </div>
+                                     ) : (
+                                         <Button 
+                                            size="icon" 
+                                            variant="ghost" 
+                                            className="h-8 w-8 text-green-500 hover:bg-green-500/10"
+                                            onClick={() => handleUpdateBarberHour(dayOfWeek, '09:00', '18:00')} 
+                                            disabled={!isShopOpen}
+                                            title="Ativar horário para este dia"
+                                         >
+                                            <PlusCircle className="h-4 w-4" />
+                                         </Button>
+                                     )}
+                                   </div>
       </div>
                               </div>
                             );
